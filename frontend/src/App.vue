@@ -1,6 +1,5 @@
 <template>
   <div class="flex h-screen">
-    <!-- Left: Document list -->
     <div class="w-64 bg-gray-900 p-4 flex flex-col gap-3 border-r border-gray-800">
       <h1 class="text-lg font-bold text-amber-400">古籍 OCR 标注平台</h1>
 
@@ -15,7 +14,6 @@
         加载示例文档
       </button>
 
-      <!-- Search -->
       <div>
         <input v-model="store.searchQuery" @input="store.searchInDocuments(store.searchQuery)"
           placeholder="全文检索..." class="w-full bg-gray-800 rounded px-3 py-2 text-sm" />
@@ -26,7 +24,6 @@
         </div>
       </div>
 
-      <!-- Document list -->
       <div class="flex-1 overflow-y-auto space-y-1">
         <div v-for="d in store.documents" :key="d.id" @click="store.currentDoc = d"
           class="bg-gray-800 rounded p-2 cursor-pointer text-sm"
@@ -36,13 +33,11 @@
         </div>
       </div>
 
-      <!-- Export -->
       <button @click="doExport" class="bg-green-700 py-2 rounded text-sm hover:bg-green-600">
         导出 TEI/XML
       </button>
     </div>
 
-    <!-- Center: Image + OCR overlay -->
     <div class="flex-1 relative bg-gray-950 overflow-hidden">
       <ImageCanvas v-if="store.currentDoc" />
       <div v-else class="flex items-center justify-center h-full text-gray-600">
@@ -50,36 +45,49 @@
       </div>
     </div>
 
-    <!-- Right: OCR results & annotations -->
     <div class="w-80 bg-gray-900 p-4 flex flex-col gap-3 border-l border-gray-800 overflow-y-auto">
-      <h3 class="text-amber-300 font-bold text-sm">OCR 识别结果</h3>
-      <div v-if="store.currentDoc" class="space-y-2">
-        <div v-for="r in store.currentDoc.results" :key="r.id"
-          class="bg-gray-800 rounded p-2 text-sm">
-          <div class="flex justify-between">
-            <span class="text-white font-medium">{{ r.text }}</span>
-            <span class="text-xs px-2 py-0.5 rounded"
-              :class="r.confidence > 0.9 ? 'bg-green-900 text-green-400' : 'bg-yellow-900 text-yellow-400'">
-              {{ (r.confidence * 100).toFixed(0) }}%
-            </span>
+      <ChapterDirectory />
+
+      <div class="border-t border-gray-800 pt-3">
+        <h3 class="text-amber-300 font-bold text-sm">OCR 识别结果</h3>
+        <div v-if="store.currentDoc" class="space-y-2 mt-2">
+          <div v-for="r in store.currentDoc.results" :key="r.id"
+            class="bg-gray-800 rounded p-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-white font-medium">{{ r.text }}</span>
+              <span class="text-xs px-2 py-0.5 rounded"
+                :class="r.confidence > 0.9 ? 'bg-green-900 text-green-400' : 'bg-yellow-900 text-yellow-400'">
+                {{ (r.confidence * 100).toFixed(0) }}%
+              </span>
+            </div>
+            <div class="text-xs text-gray-400 mt-1">
+              简体: {{ store.convertVariant(r.text) }}
+            </div>
+            <input v-model="r.corrected" placeholder="人工校正..."
+              class="w-full bg-gray-700 rounded px-2 py-1 text-xs mt-1" />
           </div>
-          <div class="text-xs text-gray-400 mt-1">
-            简体: {{ store.convertVariant(r.text) }}
-          </div>
-          <input v-model="r.corrected" placeholder="人工校正..."
-            class="w-full bg-gray-700 rounded px-2 py-1 text-xs mt-1" />
         </div>
       </div>
 
-      <h3 class="text-amber-300 font-bold text-sm mt-4">标注列表</h3>
-      <div v-if="store.currentDoc" class="space-y-1">
-        <div v-for="a in store.currentDoc.annotations" :key="a.id"
-          class="bg-gray-800 rounded p-2 text-xs flex justify-between">
-          <span>[{{ a.type }}] {{ a.label }}: {{ a.content }}</span>
-          <button @click="store.removeAnnotation(a.id)" class="text-red-400 hover:underline">删除</button>
-        </div>
-        <div v-if="!store.currentDoc.annotations.length" class="text-gray-600 text-xs">
-          在图片上拖拽框选区域添加标注
+      <div class="border-t border-gray-800 pt-3">
+        <h3 class="text-amber-300 font-bold text-sm">标注列表</h3>
+        <div v-if="store.currentDoc" class="space-y-1 mt-2">
+          <div v-for="a in store.currentDoc.annotations" :key="a.id"
+            class="bg-gray-800 rounded p-2 text-xs flex justify-between cursor-pointer"
+            :class="store.focusedAnnotationId === a.id ? 'ring-1 ring-amber-500' : ''"
+            @click="store.focusAnnotation(a.id)">
+            <span>
+              <span class="px-1 rounded text-[10px]"
+                :class="a.type === 'chapter' ? 'bg-amber-900 text-amber-300' : 'bg-blue-900 text-blue-300'">
+                {{ a.type === 'chapter' ? a.label : a.type }}
+              </span>
+              {{ a.content || a.label }}
+            </span>
+            <button @click.stop="store.removeAnnotation(a.id)" class="text-red-400 hover:underline">删除</button>
+          </div>
+          <div v-if="!store.currentDoc.annotations.length" class="text-gray-600 text-xs">
+            在图片上拖拽框选区域添加标注
+          </div>
         </div>
       </div>
     </div>
@@ -89,6 +97,7 @@
 <script setup lang="ts">
 import { useOcrStore } from './store/ocr'
 import ImageCanvas from './components/ImageCanvas.vue'
+import ChapterDirectory from './components/ChapterDirectory.vue'
 
 const store = useOcrStore()
 

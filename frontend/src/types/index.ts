@@ -17,10 +17,19 @@ export interface Document {
 
 export interface Annotation {
   id: string
-  type: 'region' | 'character' | 'note'
+  type: 'region' | 'character' | 'note' | 'chapter'
   bbox: [number, number, number, number]
   label: string
   content: string
+}
+
+export interface ChapterItem {
+  id: string
+  title: string
+  level: number
+  annotationId: string
+  bbox: [number, number, number, number]
+  children: ChapterItem[]
 }
 
 export interface VariantChar {
